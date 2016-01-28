@@ -18,3 +18,37 @@ primitives, it is assumed to be required.
 
 Along the way, lots of checking and casting is done to ensure that the
 resulting struct is validated.
+
+## Example
+
+Here is a simple example, consider the following Go code:
+
+```
+type Example1 struct {
+	unexportedData bool
+	Message        string
+	Weight         *int `unq:"weight"`
+	Vec            [3]float64
+	Names          []string `unq:"names"`
+}
+
+...
+    v := Example1{
+        unexportedData: true,
+	}
+	sig, err := Scan(v)
+	copy1 := Example1{}
+	unquery.Unmarshal("Message=Hello&Vec=.1&Vec=.2&Vec=.3&names=bill", sig, &copy1)
+```
+
+After the call to `Unmarshal`, the value of `copy1` will be:
+
+```
+Example1{
+	unexportedData: true,
+	Message:        "Hello",
+	Weight:         nil,
+	Vec:            [3]float64{0.1, 0.2, 0.3},
+	Names:          []string{"bill"},
+}
+```
