@@ -107,6 +107,36 @@ func TestUnmarshal(t *testing.T) {
 		NoError(c, err)
 		Resembles(c, copy.Tagged, "ItWorked")
 	})
+	Convey("Check example", t, func(c C) {
+		v := Example1{
+			unexportedData: true,
+		}
+
+		sig, err := Scan(v)
+		NoError(c, err)
+
+		copy1 := Example1{}
+
+		err = Unmarshal("Message=Hello&Vec=.1&Vec=.2&Vec=.3&names=bill", sig, &copy1)
+		NoError(c, err)
+		Resembles(c, copy1, Example1{
+			unexportedData: true,
+			Message:        "Hello",
+			Weight:         nil,
+			Vec:            [3]float64{0.1, 0.2, 0.3},
+			Names:          []string{"bill"},
+		})
+
+		copy2 := Example1{}
+
+		err = Unmarshal("Message=Hello&Vec=.1&Vec=.2&Vec=.3&weight=120", sig, &copy2)
+		NoError(c, err)
+		Equals(c, copy2.unexportedData, true)
+		Equals(c, copy2.Message, "Hello")
+		Equals(c, *copy2.Weight, 120)
+		Equals(c, copy2.Vec, [3]float64{0.1, 0.2, 0.3})
+		IsNil(c, copy2.Names)
+	})
 	Convey("Check for error when passing a struct", t, func(c C) {
 		v := Sample1{}
 		str := "Singleton=1"

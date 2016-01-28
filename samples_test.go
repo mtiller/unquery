@@ -20,3 +20,11 @@ type Sample4 struct {
 type Sample5 struct {
 	Tagged string `unq:"tagged"`
 }
+
+type Example1 struct {
+	unexportedData bool
+	Message        string
+	Weight         *int `unq:"weight"`
+	Vec            [3]float64
+	Names          []string `unq:"names"`
+}
