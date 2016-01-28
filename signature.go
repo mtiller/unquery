@@ -2,16 +2,19 @@ package unquery
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"unicode"
 )
 
 type ParameterDetails struct {
-	FieldName string // Needed, if we have kind and offset?
-	Kind      reflect.Kind
-	Offset    uintptr
-	Min       int
-	Max       int
+	FieldName  string // Needed, if we have kind and offset?
+	FieldIndex int
+	Array      bool
+	Kind       reflect.Kind
+	Offset     uintptr
+	Min        int
+	Max        int
 }
 
 type ParameterName string
@@ -19,8 +22,12 @@ type ParameterName string
 type Signature struct {
 	Type       reflect.Type
 	Original   interface{}
+	Value      reflect.Value
 	Parameters map[ParameterName]ParameterDetails
 }
+
+// This is the maximum size of arrays
+const UpperLimit = math.MaxInt8
 
 func Scan(v interface{}) (Signature, error) {
 	blank := Signature{}
@@ -29,6 +36,7 @@ func Scan(v interface{}) (Signature, error) {
 	ret := Signature{
 		Type:       vt,
 		Original:   v,
+		Value:      reflect.ValueOf(v),
 		Parameters: map[ParameterName]ParameterDetails{},
 	}
 	if vt.Kind() != reflect.Struct {
@@ -55,7 +63,7 @@ func Scan(v interface{}) (Signature, error) {
 				pkind = ft.Type.Elem().Kind()
 			case reflect.Slice:
 				min = 0
-				max = -1
+				max = UpperLimit
 				pkind = ft.Type.Elem().Kind()
 			case reflect.Ptr:
 				min = 0
@@ -64,37 +72,27 @@ func Scan(v interface{}) (Signature, error) {
 			}
 
 			// These types, we can't handle...
-			if pkind == reflect.Complex64 {
-				continue
-			}
-			if pkind == reflect.Complex128 {
-				continue
-			}
-			if pkind == reflect.Chan {
-				continue
-			}
-			if pkind == reflect.Func {
-				continue
-			}
-			if pkind == reflect.Interface {
-				continue
-			}
-			if pkind == reflect.Map {
-				continue
-			}
-			if pkind == reflect.Struct {
-				continue
-			}
-			if pkind == reflect.UnsafePointer {
-				continue
+			if pkind == reflect.Complex64 ||
+				pkind == reflect.Complex128 ||
+				pkind == reflect.Chan ||
+				pkind == reflect.Func ||
+				pkind == reflect.Interface ||
+				pkind == reflect.Map ||
+				pkind == reflect.Struct ||
+				pkind == reflect.UnsafePointer {
+				return blank,
+					fmt.Errorf("Cannot handle exported variables of type %s",
+						pkind.String())
 			}
 
 			details := ParameterDetails{
-				FieldName: ft.Name,
-				Kind:      pkind,
-				Offset:    ft.Offset,
-				Min:       min,
-				Max:       max,
+				FieldName:  ft.Name,
+				FieldIndex: i,
+				Array:      ft.Type.Kind() == reflect.Array,
+				Kind:       pkind,
+				Offset:     ft.Offset,
+				Min:        min,
+				Max:        max,
 			}
 			ret.Parameters[ParameterName(pname)] = details
 		}

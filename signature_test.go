@@ -63,7 +63,7 @@ func TestScanning(t *testing.T) {
 			Equals(c, sig.Type, t)
 			Resembles(c, sig.Original, v)
 
-			Check(c, sig, "Multiple", "Multiple", reflect.Bool, 0, -1)
+			Check(c, sig, "Multiple", "Multiple", reflect.Bool, 0, UpperLimit)
 		})
 		Convey("Test array fields", func(c C) {
 			v := Sample4{}
