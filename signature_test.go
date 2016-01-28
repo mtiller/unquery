@@ -8,27 +8,6 @@ import (
 	"testing"
 )
 
-type Sample1 struct {
-	ignore    string
-	Singleton int
-}
-
-type Sample2 struct {
-	Optional *string
-}
-
-type Sample3 struct {
-	Multiple []bool
-}
-
-type Sample4 struct {
-	Fixed [5]uint
-}
-
-type Sample5 struct {
-	Tagged string `unq:"tagged"`
-}
-
 func Check(c C, sig Signature, name string, pname string,
 	kind reflect.Kind, min int, max int) {
 	Equals(c, len(sig.Parameters), 1)
@@ -41,7 +20,7 @@ func Check(c C, sig Signature, name string, pname string,
 	Equals(c, details.Max, max)
 }
 
-func TestUnquery(t *testing.T) {
+func TestScanning(t *testing.T) {
 	Convey("Test signature generation", t, func(c C) {
 		Convey("Test non-structs", func(c C) {
 			_, err := Scan(5)
@@ -62,6 +41,8 @@ func TestUnquery(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
+			Resembles(c, sig.Original, v)
+
 			Check(c, sig, "Singleton", "Singleton", reflect.Int, 1, 1)
 		})
 		Convey("Test optional fields", func(c C) {
@@ -70,6 +51,7 @@ func TestUnquery(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
+			Resembles(c, sig.Original, v)
 
 			Check(c, sig, "Optional", "Optional", reflect.String, 0, 1)
 		})
@@ -79,6 +61,7 @@ func TestUnquery(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
+			Resembles(c, sig.Original, v)
 
 			Check(c, sig, "Multiple", "Multiple", reflect.Bool, 0, -1)
 		})
@@ -88,6 +71,7 @@ func TestUnquery(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
+			Resembles(c, sig.Original, v)
 
 			Check(c, sig, "Fixed", "Fixed", reflect.Uint, 5, 5)
 		})
@@ -97,6 +81,7 @@ func TestUnquery(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
+			Resembles(c, sig.Original, v)
 
 			Check(c, sig, "Tagged", "tagged", reflect.String, 1, 1)
 		})
