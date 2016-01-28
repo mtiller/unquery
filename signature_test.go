@@ -41,7 +41,6 @@ func TestScanning(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
-			Resembles(c, sig.Original, v)
 
 			Check(c, sig, "Singleton", "Singleton", reflect.Int, 1, 1)
 		})
@@ -51,7 +50,6 @@ func TestScanning(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
-			Resembles(c, sig.Original, v)
 
 			Check(c, sig, "Optional", "Optional", reflect.String, 0, 1)
 		})
@@ -61,7 +59,6 @@ func TestScanning(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
-			Resembles(c, sig.Original, v)
 
 			Check(c, sig, "Multiple", "Multiple", reflect.Bool, 0, UpperLimit)
 		})
@@ -71,7 +68,6 @@ func TestScanning(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
-			Resembles(c, sig.Original, v)
 
 			Check(c, sig, "Fixed", "Fixed", reflect.Uint, 5, 5)
 		})
@@ -81,7 +77,6 @@ func TestScanning(t *testing.T) {
 			sig, err := Scan(v)
 			NoError(c, err)
 			Equals(c, sig.Type, t)
-			Resembles(c, sig.Original, v)
 
 			Check(c, sig, "Tagged", "tagged", reflect.String, 1, 1)
 		})

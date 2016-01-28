@@ -21,7 +21,6 @@ type ParameterName string
 
 type Signature struct {
 	Type       reflect.Type
-	Original   interface{}
 	Value      reflect.Value
 	Parameters map[ParameterName]ParameterDetails
 }
@@ -35,7 +34,6 @@ func Scan(v interface{}) (Signature, error) {
 	vt := reflect.TypeOf(v)
 	ret := Signature{
 		Type:       vt,
-		Original:   v,
 		Value:      reflect.ValueOf(v),
 		Parameters: map[ParameterName]ParameterDetails{},
 	}

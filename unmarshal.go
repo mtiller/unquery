@@ -13,34 +13,79 @@ func Unmarshal(query string, sig Signature, p interface{}) error {
 	if err != nil {
 		return fmt.Errorf("Error parsing query string: %v", err)
 	}
+	return UnmarshalValues(parsed, sig, p)
+}
+
+func UnmarshalValues(parsed url.Values, sig Signature, p interface{}) error {
+	// Get the type of p
 	pt := reflect.TypeOf(p)
+
+	// Make sure that the type of p (pt) is a pointer type
 	if pt.Kind() != reflect.Ptr {
 		return fmt.Errorf("Unmarshal expected a pointer to a %s", sig.Type.String())
 	}
-	pit := pt.Elem()
-	if sig.Type != pit {
+
+	// Get the type that p points to...
+	pet := pt.Elem()
+
+	// If it isn't the same type as what our signature is for, error out
+	if sig.Type != pet {
 		return fmt.Errorf("Unmarshal passed a pointer to wrong type, "+
-			"expected %s, but got %s (%s)", sig.Type.String(), pit.String(),
+			"expected %s, but got %s (%s)", sig.Type.String(), pet.String(),
 			pt.String())
 	}
 
+	// Now get get Value reprentations of both p and the what p is pointing to...
 	pv := reflect.ValueOf(p)
-	piv := pv.Elem()
+	pev := pv.Elem()
 
-	// Initialize the unmarshalled value to be equal to the default
-	// value of the signature.
-	piv.Set(sig.Value)
+	// Create a new instance of the structure we are working with here
+	newv := reflect.New(pev.Type())
 
+	// Then give it an initial value that matches the default value associated
+	// with the signature.  This is mainly a way to copy the *unexported*
+	// fields
+	newv.Elem().Set(sig.Value)
+
+	// Now copy all the **exported** field values from p into this new
+	// value.  This gives us a value that has the default values for
+	// the unexported variables but doesn't touch the exported field
+	// values from p
+	for _, details := range sig.Parameters {
+		newv.Elem().Field(details.FieldIndex).Set(pev.Field(details.FieldIndex))
+	}
+
+	// Now set the value that p points to be this new hybrid initialized value
+	pev.Set(newv.Elem())
+
+	// Now lets loop over the exported fields again and given them
+	// new values based on the contents of the query string values...
 	for pname, details := range sig.Parameters {
+		// Get the value and type for the field associated with the
+		// current parameter
+		fv := pev.Field(details.FieldIndex)
+		ft := pet.Field(details.FieldIndex)
+
+		//fv.Set(pev.Field(details.FieldIndex))
+
+		// Is this parameter in the query string?
 		values, exists := parsed[string(pname)]
-		if !exists {
+
+		// If not, just check to see if one is required.  If not,
+		// then just skip this parameter and leave its current
+		// value alone.
+		if !exists || len(values) == 0 {
 			if details.Min > 0 {
-				return fmt.Errorf("No value given for %s", pname)
+				return fmt.Errorf("Expected at least %d values for %s",
+					details.Min, pname)
 			}
 			continue
 		}
 
 		nv := len(values)
+
+		// Check to make sure we have as many entries in values as
+		// we expect.  If not, throw an error
 		if nv < details.Min {
 			return fmt.Errorf("Not enough values given for %s", pname)
 		}
@@ -48,21 +93,67 @@ func Unmarshal(query string, sig Signature, p interface{}) error {
 			return fmt.Errorf("Too many values given for %s", pname)
 		}
 
-		// Optional
+		// Assume we there is a problem.  This will get overridden
+		// if we find a way to use the values...
+		var perr error = fmt.Errorf("Unhandled case for parameters %s"+
+			"in UnmarshalValues", pname)
+
+		// This parameter is optional...
 		if details.Min == 0 && details.Max == 1 {
+			fv.Set(reflect.New(ft.Type.Elem()))
+			perr = parseAs(values[0], details.Kind, fv.Elem())
 		}
-		// Slice
+
+		// This parameter is a slice (can be any size)...
 		if details.Min == 0 && details.Max == UpperLimit {
+			// Allocate a slice big enough to hold the values
+			slice := reflect.MakeSlice(ft.Type, nv, nv)
+			// Set the field equal to this new slice
+			fv.Set(slice)
+			// Now loop over the values, parse them and insert
+			// them at the appropriate spot in the slice
+			for ind, value := range values {
+				perr = parseAs(value, details.Kind, fv.Index(ind))
+				if perr != nil {
+					// If we get an error, just break out.  That error
+					// value will be seen at the end
+					break
+				}
+			}
 		}
-		// Array
+
+		// This parameter is an array (i.e., fixed size)
 		if details.Array {
+			// Make sure we have exactly the number of values we need
+			// to fill the array
+			if nv != details.Min {
+				return fmt.Errorf("Expected %d values for %s, but got %d: %v",
+					details.Min, pname, nv, values)
+			}
+			// Now loop over all values in the query string, parse them
+			// and then insert them into the array at the approriate index
+			for ind, value := range values {
+				perr = parseAs(value, details.Kind, fv.Index(ind))
+				if perr != nil {
+					break
+				}
+			}
 		}
-		// Scalar
+
+		// This parameter is a simple scalar
 		if !details.Array && details.Min == 1 && details.Max == 1 {
-			parseAs(values[0], details.Kind, piv.Field(details.FieldIndex))
+			// Just parse it and assign it to the current field
+			perr = parseAs(values[0], details.Kind, pev.Field(details.FieldIndex))
+		}
+
+		// If any errors occured parsing any of the query string values for
+		// the expected kind, report an error
+		if perr != nil {
+			return fmt.Errorf("Error processing parameter %s: %v", pname, perr)
 		}
 	}
 
+	// If we get here, everything worked.
 	return nil
 }
 
