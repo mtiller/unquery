@@ -1,6 +1,8 @@
 package unquery
 
 import (
+	"log"
+
 	. "github.com/smartystreets/goconvey/convey"
 	. "github.com/xogeny/xconvey"
 	"testing"
@@ -107,6 +109,29 @@ func TestUnmarshal(t *testing.T) {
 		NoError(c, err)
 		Resembles(c, copy.Tagged, "ItWorked")
 	})
+	Convey("Test different int sizes", t, func(c C) {
+		v := Sample7{}
+
+		sig, err := Scan(v)
+		NoError(c, err)
+
+		copy := Sample7{}
+
+		err = Unmarshal("Int=2&Int8=3&Int16=4&Int32=5&Int64=6&UInt=7&UInt8=8&UInt16=9&UInt32=10&UInt64=11", sig, &copy)
+		NoError(c, err)
+		Resembles(c, copy, Sample7{
+			Int:    2,
+			Int8:   3,
+			Int16:  4,
+			Int32:  5,
+			Int64:  6,
+			UInt:   7,
+			UInt8:  8,
+			UInt16: 9,
+			UInt32: 10,
+			UInt64: 11,
+		})
+	})
 	Convey("Check example", t, func(c C) {
 		v := Example1{
 			unexportedData: true,
@@ -137,12 +162,109 @@ func TestUnmarshal(t *testing.T) {
 		Equals(c, copy2.Vec, [3]float64{0.1, 0.2, 0.3})
 		IsNil(c, copy2.Names)
 	})
+}
+
+func TestErrors(t *testing.T) {
 	Convey("Check for error when passing a struct", t, func(c C) {
 		v := Sample1{}
 		str := "Singleton=1"
 		sig, err := Scan(v)
 		NoError(c, err)
 		err = Unmarshal(str, sig, Sample1{})
+		IsError(c, err)
+	})
+	Convey("Check for error when passing a bogus query string", t, func(c C) {
+		v := Sample1{}
+		str := "Singleton=%5"
+		sig, err := Scan(v)
+		NoError(c, err)
+		err = Unmarshal(str, sig, &Sample1{})
+		log.Printf("err = %v", err)
+		IsError(c, err)
+	})
+	Convey("Check for error when passing wrong type", t, func(c C) {
+		str := "Singleton=1"
+		v := Sample1{ignore: "true"}
+
+		sig, err := Scan(v)
+		NoError(c, err)
+		Equals(c, v.Singleton, 0)
+
+		copy := Sample2{}
+		err = Unmarshal(str, sig, &copy)
+		IsError(c, err)
+	})
+	Convey("Check for bogus integer values", t, func(c C) {
+		v := Sample7{}
+
+		sig, err := Scan(v)
+		NoError(c, err)
+
+		copy := Sample7{}
+
+		err = Unmarshal("Int=2.5&Int8=3&Int16=4&Int32=5&Int64=6&UInt=7&UInt8=8&UInt16=9&UInt32=10&UInt64=11", sig, &copy)
+		IsError(c, err)
+	})
+	Convey("Check for errors when passing too few values", t, func(c C) {
+		v := Sample4{}
+
+		sig, err := Scan(v)
+		NoError(c, err)
+
+		copy := Sample4{}
+
+		err = Unmarshal("Fixed=1&Fixed=2&Fixed=3&Fixed=4", sig, &copy)
+		IsError(c, err)
+	})
+	Convey("Check for errors when passing too many values", t, func(c C) {
+		v := Sample4{}
+
+		sig, err := Scan(v)
+		NoError(c, err)
+
+		copy := Sample4{}
+
+		err = Unmarshal("Fixed=1&Fixed=2&Fixed=3&Fixed=4&Fixed=5&Fixed=6",
+			sig, &copy)
+		IsError(c, err)
+	})
+	Convey("Check for errors when passing wrong type to array", t, func(c C) {
+		v := Sample4{}
+
+		sig, err := Scan(v)
+		NoError(c, err)
+
+		copy := Sample4{}
+
+		err = Unmarshal("Fixed=1&Fixed=2&Fixed=3&Fixed=Four&Fixed=5",
+			sig, &copy)
+		IsError(c, err)
+	})
+	Convey("Check for errors when passing wrong type to slice", t, func(c C) {
+		v := Sample3{}
+
+		sig, err := Scan(v)
+		NoError(c, err)
+		Equals(c, v.Multiple, nil)
+
+		copy := Sample3{}
+
+		err = Unmarshal("Multiple=true&Multiple=5&Multiple=0&Multiple=No",
+			sig, &copy)
+		IsError(c, err)
+	})
+	Convey("Check for error when parsing bad float", t, func(c C) {
+		v := Example1{
+			unexportedData: true,
+		}
+
+		sig, err := Scan(v)
+		NoError(c, err)
+
+		copy1 := Example1{}
+
+		err = Unmarshal("Message=Hello&Vec=.1&Vec=seven&Vec=.3&names=bill",
+			sig, &copy1)
 		IsError(c, err)
 	})
 }

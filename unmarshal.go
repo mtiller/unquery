@@ -125,7 +125,8 @@ func UnmarshalValues(parsed url.Values, sig Signature, p interface{}) error {
 		// This parameter is an array (i.e., fixed size)
 		if details.Array {
 			// Make sure we have exactly the number of values we need
-			// to fill the array
+			// to fill the array (currently unreachable, but keeping here
+			// just to protect in case of refactoring)
 			if nv != details.Min {
 				return fmt.Errorf("Expected %d values for %s, but got %d: %v",
 					details.Min, pname, nv, values)
@@ -161,10 +162,6 @@ func parseAs(str string, kind reflect.Kind, dst reflect.Value) error {
 	// Handle strings
 	if kind == reflect.String {
 		dst.SetString(str)
-		if !dst.IsValid() {
-			return fmt.Errorf("Error setting field of type %s to %s",
-				kind.String(), str)
-		}
 		return nil
 	}
 
@@ -205,10 +202,6 @@ func parseAs(str string, kind reflect.Kind, dst reflect.Value) error {
 			return fmt.Errorf("Error parsing '%s' as an integer: %v", str, err)
 		}
 		dst.SetInt(i)
-		if !dst.IsValid() {
-			return fmt.Errorf("Error setting field of type %s to %v",
-				kind.String(), i)
-		}
 		return nil
 	}
 
@@ -233,10 +226,6 @@ func parseAs(str string, kind reflect.Kind, dst reflect.Value) error {
 				str, err)
 		}
 		dst.SetUint(i)
-		if !dst.IsValid() {
-			return fmt.Errorf("Error setting field of type %s to %v",
-				kind.String(), i)
-		}
 		return nil
 	}
 
@@ -251,10 +240,6 @@ func parseAs(str string, kind reflect.Kind, dst reflect.Value) error {
 			return fmt.Errorf("Error parsing '%s' as a float: %v", str, err)
 		}
 		dst.SetFloat(i)
-		if !dst.IsValid() {
-			return fmt.Errorf("Error setting field of type %s to %v",
-				kind.String(), i)
-		}
 		return nil
 	}
 

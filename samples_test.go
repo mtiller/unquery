@@ -21,6 +21,23 @@ type Sample5 struct {
 	Tagged string `unq:"tagged"`
 }
 
+type Sample6 struct {
+	NestedStruct Sample5 // Not allowed
+}
+
+type Sample7 struct {
+	Int    int
+	Int8   int8
+	Int16  int16
+	Int32  int32
+	Int64  int64
+	UInt   uint
+	UInt8  uint8
+	UInt16 uint16
+	UInt32 uint32
+	UInt64 uint64
+}
+
 type Example1 struct {
 	unexportedData bool
 	Message        string

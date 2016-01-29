@@ -34,6 +34,9 @@ func TestScanning(t *testing.T) {
 
 			_, err = Scan(map[string]int{})
 			IsError(c, err)
+
+			_, err = Scan(Sample6{})
+			IsError(c, err)
 		})
 		Convey("Test hidden fields", func(c C) {
 			v := Sample1{}
